@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NRW Dashboard — Water Supply Monitoring</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0e1a;--surface:#111827;--s2:#1a2235;--s3:#222f45;
+  --border:rgba(99,179,237,0.12);--accent:#38bdf8;--g:#34d399;
+  --danger:#f87171;--warn:#fbbf24;--text:#e2e8f0;--muted:#64748b;
+  --mono:'Space Mono',monospace;--body:'DM Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;font-size:14px;line-height:1.6}
+
+/* HEADER */
+header{background:linear-gradient(135deg,#0a1628,#0d1f3c,#0a1628);border-bottom:1px solid var(--border);padding:18px 28px;position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.hdr-left{display:flex;align-items:center;gap:12px}
+.logo{width:40px;height:40px;background:linear-gradient(135deg,var(--accent),#0ea5e9);border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;color:#fff;font-size:11px;flex-shrink:0}
+.hdr-titles h1{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent)}
+.hdr-titles p{font-size:11px;color:var(--muted);margin-top:1px}
+.hdr-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;border:1px solid}
+.badge-b{background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.3);color:var(--accent)}
+.badge-g{background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.3);color:var(--g)}
+.badge-a{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.3);color:var(--warn)}
+.btn-cfg{display:flex;align-items:center;gap:6px;padding:7px 14px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.35);border-radius:7px;color:var(--accent);font-family:var(--body);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-cfg:hover{background:rgba(56,189,248,.22);border-color:var(--accent)}
+
+/* NAV */
+nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;display:flex;overflow-x:auto}
+.nav-btn{padding:12px 16px;background:none;border:none;cursor:pointer;color:var(--muted);font-family:var(--body);font-size:12px;font-weight:500;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.nav-btn:hover{color:var(--text)}
+.nav-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* FILTER BAR */
+.filter-bar{background:var(--s2);border-bottom:1px solid var(--border);padding:10px 28px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.filter-bar label{font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap}
+.filter-bar select{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);font-family:var(--body);font-size:12px;cursor:pointer;outline:none;transition:border-color .2s}
+.filter-bar select:focus{border-color:var(--accent)}
+.filter-sep{width:1px;height:20px;background:var(--border)}
+
+/* MAIN */
+main{padding:22px 28px;max-width:1700px;margin:0 auto}
+.section{display:none}
+.section.active{display:block;animation:fi .3s ease}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* SECTION HEADER */
+.sec-hdr{margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border);display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.sec-hdr h2{font-family:var(--mono);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent)}
+.sec-hdr p{font-size:11px;color:var(--muted);margin-top:2px}
+.last-upd{font-size:10px;color:var(--muted);font-family:var(--mono)}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:22px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:16px;position:relative;overflow:hidden;transition:border-color .2s}
+.kpi:hover{border-color:rgba(99,179,237,.3)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi.blue::before{background:linear-gradient(90deg,var(--accent),transparent)}
+.kpi.green::before{background:linear-gradient(90deg,var(--g),transparent)}
+.kpi.red::before{background:linear-gradient(90deg,var(--danger),transparent)}
+.kpi.amber::before{background:linear-gradient(90deg,var(--warn),transparent)}
+.kpi.purple::before{background:linear-gradient(90deg,#a78bfa,transparent)}
+.kpi-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600}
+.kpi-val{font-family:var(--mono);font-size:24px;font-weight:700;margin:4px 0 2px;line-height:1}
+.kpi-val.red{color:var(--danger)}.kpi-val.green{color:var(--g)}.kpi-val.amber{color:var(--warn)}.kpi-val.blue{color:var(--accent)}
+.kpi-sub{font-size:10px;color:var(--muted)}
+.kpi-ico{position:absolute;top:12px;right:12px;font-size:16px;opacity:.3}
+
+/* CHART GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px}
+.gfull{margin-bottom:18px}
+@media(max-width:1000px){.g2{grid-template-columns:1fr}.g3{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.g3{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:16px}
+.card h3{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px}
+.cw{position:relative;height:260px}
+.cw-sm{position:relative;height:200px}
+.cw-lg{position:relative;height:310px}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 12px;background:var(--s2);font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.tm{font-family:var(--mono)}.tred{color:var(--danger);font-weight:600}.twarn{color:var(--warn);font-weight:600}.tgrn{color:var(--g);font-weight:600}
+.pill{display:inline-block;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600}
+.p-red{background:rgba(248,113,113,.15);color:var(--danger)}
+.p-grn{background:rgba(52,211,153,.15);color:var(--g)}
+.p-warn{background:rgba(251,191,36,.15);color:var(--warn)}
+.p-blue{background:rgba(56,189,248,.15);color:var(--accent)}
+
+/* LEGEND */
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.leg-line{width:16px;height:2px;border-radius:1px;flex-shrink:0}
+
+/* IWA */
+.iwa-row{display:flex;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:7px;font-size:12px}
+.iwa-row:last-child{border-bottom:none}
+.i1{padding-left:18px}.i2{padding-left:36px}.i3{padding-left:54px}
+.iwa-lbl{flex:1;color:var(--text)}
+.iwa-m3{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right;min-width:90px}
+.iwa-pct{font-family:var(--mono);font-size:11px;text-align:right;min-width:50px}
+.idot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* PROGRESS */
+.prog-wrap{margin:7px 0}
+.prog-lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:3px}
+.prog-bar{height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px;transition:width 1s ease}
+
+/* INTERVENTIONS */
+.int-list{display:flex;flex-direction:column;gap:8px}
+.int-item{background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:12px;display:flex;align-items:flex-start;gap:10px}
+.int-mo{font-family:var(--mono);font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.07em;min-width:44px;margin-top:1px}
+.int-body{flex:1}
+.int-title{font-size:13px;font-weight:500}
+.int-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.int-cost{font-family:var(--mono);font-size:11px;color:var(--warn);text-align:right;min-width:80px;margin-top:2px}
+
+/* INFO GRID */
+.info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:20px}
+.info-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:16px}
+.info-card h4{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:11px}
+.info-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px}
+.info-row:last-child{border-bottom:none}
+.info-val{font-family:var(--mono);font-size:11px;color:var(--text)}
+
+/* FINDINGS */
+.find-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.find-lbl{font-size:11px;color:var(--muted);min-width:165px}
+.find-bg{flex:1;height:12px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.find-fill{height:100%;border-radius:3px;background:var(--accent);opacity:.7}
+.find-n{font-family:var(--mono);font-size:11px;color:var(--text);min-width:26px;text-align:right}
+
+/* FOOTER */
+footer{margin-top:36px;padding:18px 28px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.ftag{font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:3px 8px;border-radius:4px}
+.fcopy{font-size:11px;color:var(--muted)}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--s2);border-radius:3px}
+
+/* ══════ CONFIG MODAL ══════ */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(5px);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto}
+.overlay.hidden{display:none}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:100%;max-width:980px;margin:auto;overflow:hidden}
+.modal-hdr{background:linear-gradient(135deg,#0a1628,#0d1f3c);padding:20px 26px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.modal-hdr h2{font-family:var(--mono);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);display:flex;align-items:center;gap:8px}
+.mclose{background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;padding:4px;border-radius:4px;transition:color .2s}
+.mclose:hover{color:var(--text)}
+.mtabs{display:flex;background:var(--s2);border-bottom:1px solid var(--border);overflow-x:auto}
+.mtab{padding:10px 16px;background:none;border:none;cursor:pointer;font-family:var(--body);font-size:11px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s}
+.mtab:hover{color:var(--text)}
+.mtab.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(56,189,248,.05)}
+.mbody{padding:24px;max-height:68vh;overflow-y:auto}
+.mpanel{display:none}
+.mpanel.active{display:block}
+
+/* FORM */
+.fsect{margin-bottom:24px}
+.fsect-title{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:12px;padding-bottom:7px;border-bottom:1px solid var(--border)}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.fg4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.fgfull{grid-column:1/-1}
+@media(max-width:600px){.fg,.fg3,.fg4{grid-template-columns:1fr}}
+.fgrp{display:flex;flex-direction:column;gap:4px}
+label{font-size:11px;color:var(--muted);font-weight:500}
+input[type=text],input[type=number],select,textarea{
+  background:var(--s2);border:1px solid var(--border);border-radius:6px;
+  padding:8px 11px;color:var(--text);font-family:var(--body);font-size:12px;
+  width:100%;transition:border-color .2s;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+input::placeholder{color:var(--muted)}
+textarea{resize:vertical;min-height:60px}
+select option{background:var(--s2)}
+.hint{font-size:10px;color:var(--muted);line-height:1.5;margin-top:3px}
+.divider{height:1px;background:var(--border);margin:18px 0}
+
+/* WSS/DMA dynamic blocks */
+.wss-block{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px}
+.wss-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.wss-hdr-left{display:flex;align-items:center;gap:8px}
+.wss-label{font-family:var(--mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text)}
+.wss-count{font-size:10px;color:var(--muted)}
+.dma-block{background:var(--s3);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;margin-top:10px}
+.dma-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.dma-label{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.dma-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.btn-rm{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.25);border-radius:5px;color:var(--danger);font-size:11px;font-weight:600;cursor:pointer;padding:3px 9px;transition:all .2s}
+.btn-rm:hover{background:rgba(248,113,113,.22)}
+.btn-add{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);border-radius:6px;color:var(--g);font-size:11px;font-weight:600;cursor:pointer;padding:6px 14px;transition:all .2s;display:inline-flex;align-items:center;gap:5px;margin-top:8px}
+.btn-add:hover{background:rgba(52,211,153,.2)}
+.btn-add-dma{background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);border-radius:5px;color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;padding:5px 12px;transition:all .2s;display:inline-flex;align-items:center;gap:5px;margin-top:8px}
+.btn-add-dma:hover{background:rgba(56,189,248,.2)}
+
+/* MONTH GRIDS */
+.mgrid6{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-bottom:12px}
+.mgrid12{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-bottom:12px}
+.mgrp{display:flex;flex-direction:column;gap:3px}
+.mlbl{font-size:9px;color:var(--muted);text-align:center;font-family:var(--mono)}
+.minput{text-align:center;padding:6px 3px!important;font-family:var(--mono)!important;font-size:12px!important}
+
+/* MODAL FOOTER */
+.mfoot{padding:16px 24px;border-top:1px solid var(--border);background:var(--s2);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.btn{padding:8px 18px;border-radius:7px;font-family:var(--body);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;border:none;display:inline-flex;align-items:center;gap:6px}
+.btn-pri{background:var(--accent);color:#0a0e1a}
+.btn-pri:hover{background:#7dd3fc}
+.btn-sec{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-sec:hover{color:var(--text);border-color:var(--muted)}
+.btn-danger{background:rgba(248,113,113,.15);color:var(--danger);border:1px solid rgba(248,113,113,.3)}
+.btn-danger:hover{background:rgba(248,113,113,.25)}
+.save-note{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.save-dot{width:6px;height:6px;border-radius:50%;background:var(--g)}
+.mfooter-btns{display:flex;gap:8px}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--s2);border:1px solid var(--g);border-radius:9px;padding:10px 16px;color:var(--g);font-size:12px;font-weight:500;z-index:2000;display:flex;align-items:center;gap:7px;transition:all .3s;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.toast.hidden{opacity:0;transform:translateY(8px);pointer-events:none}
+
+/* NRW STATUS COLOURS */
+.nrw-ok{color:var(--g)}.nrw-warn{color:var(--warn)}.nrw-bad{color:var(--danger)}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header>
+  <div class="hdr-left">
+    <div class="logo">NRW</div>
+    <div class="hdr-titles">
+      <h1 id="hdrTitle">NRW Dashboard</h1>
+      <p id="hdrSub">Loading…</p>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <span class="badge badge-b" id="hdrBadge1">IWA Water Balance</span>
+    <span class="badge badge-g" id="hdrBadge2">–</span>
+    <span class="badge badge-a" id="hdrBadge3">–</span>
+    <button class="btn-cfg" onclick="openModal()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Configure Dashboard
+    </button>
+  </div>
+</header>
+
+<!-- ═══ NAV ═══ -->
+<nav>
+  <button class="nav-btn active" onclick="showSection('overview')" id="tab-overview">📊 Overview</button>
+  <button class="nav-btn" onclick="showSection('nrw')" id="tab-nrw">💧 NRW Analysis</button>
+  <button class="nav-btn" onclick="showSection('consumption')" id="tab-consumption">📈 Consumption</button>
+  <button class="nav-btn" onclick="showSection('leakage')" id="tab-leakage">🔴 Leakage</button>
+  <button class="nav-btn" onclick="showSection('meters')" id="tab-meters">⚙️ Meters</button>
+  <button class="nav-btn" onclick="showSection('interventions')" id="tab-interventions">🛠️ Interventions</button>
+  <button class="nav-btn" onclick="showSection('systems')" id="tab-systems">🗺️ Systems</button>
+</nav>
+
+<!-- ═══ FILTER BAR ═══ -->
+<div class="filter-bar">
+  <label>View:</label>
+  <select id="filterWSS" onchange="applyFilter()"><option value="all">All Systems</option></select>
+  <div class="filter-sep"></div>
+  <label>DMA:</label>
+  <select id="filterDMA" onchange="applyFilter()"><option value="all">All DMAs</option></select>
+  <div class="filter-sep"></div>
+  <label>Period:</label>
+  <select id="filterPeriod" onchange="applyFilter()">
+    <option value="all">All Months</option>
+    <option value="q1">Q1 (Jan–Mar)</option>
+    <option value="q2">Q2 (Apr–Jun)</option>
+    <option value="q3">Q3 (Jul–Sep)</option>
+    <option value="q4">Q4 (Oct–Dec)</option>
+  </select>
+</div>
+
+<main>
+
+<!-- ══════════════ OVERVIEW ══════════════ -->
+<section class="section active" id="overview">
+  <div class="sec-hdr">
+    <div><h2>System Overview</h2><p id="ovSub">Key performance indicators across all systems</p></div>
+    <span class="last-upd" id="ovPeriod">–</span>
+  </div>
+  <div class="kpi-grid" id="ovKpis"></div>
+  <div class="g2">
+    <div class="card"><h3 id="ovNrwTitle">NRW % All DMAs vs. Targets</h3>
+      <div id="ovLegend" class="legend"></div>
+      <div class="cw"><canvas id="ovNrwChart"></canvas></div>
+    </div>
+    <div class="card"><h3>IWA Water Balance</h3><div class="cw"><canvas id="ovIwaPie"></canvas></div></div>
+  </div>
+  <div class="g2">
+    <div class="card"><h3 id="ovRevTitle">Monthly Revenue</h3><div class="cw"><canvas id="ovRevChart"></canvas></div></div>
+    <div class="card"><h3>Avg Consumption by Category (m³/month)</h3><div class="cw"><canvas id="ovCatChart"></canvas></div></div>
+  </div>
+  <div class="card gfull"><h3>All DMAs — NRW Summary Table</h3><div class="tbl-wrap"><table id="ovDmaTable"><thead><tr><th>WSS</th><th>DMA</th><th>Target %</th><th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>May</th><th>Jun</th><th>Avg NRW%</th><th>Status</th></tr></thead><tbody id="ovDmaBody"></tbody></table></div></div>
+</section>
+
+<!-- ══════════════ NRW ANALYSIS ══════════════ -->
+<section class="section" id="nrw">
+  <div class="sec-hdr"><div><h2>NRW Analysis</h2><p>Monthly trends and IWA Water Balance per DMA</p></div></div>
+  <div class="kpi-grid" id="nrwKpis"></div>
+  <div class="card gfull"><h3 id="nrwTrendTitle">NRW % Trend — All DMAs</h3>
+    <div id="nrwLegend" class="legend"></div>
+    <div class="cw-lg"><canvas id="nrwTrendChart"></canvas></div>
+  </div>
+  <div id="nrwDmaCards" class="g2"></div>
+  <div class="card gfull">
+    <h3>IWA Water Balance — Component Detail</h3>
+    <div id="iwaTree"></div>
+  </div>
+</section>
+
+<!-- ══════════════ CONSUMPTION ══════════════ -->
+<section class="section" id="consumption">
+  <div class="sec-hdr"><div><h2>Consumption Analysis</h2><p>Billed consumption by category and month</p></div></div>
+  <div class="kpi-grid" id="consKpis"></div>
+  <div class="card gfull"><h3>Monthly Consumption by Category (m³)</h3><div class="cw-lg"><canvas id="consStack"></canvas></div></div>
+  <div class="g2">
+    <div class="card"><h3>Accounts Billed per Month</h3><div class="cw"><canvas id="consAccs"></canvas></div></div>
+    <div class="card"><h3>Volume per Account (m³/acc)</h3><div class="cw"><canvas id="consM3Acc"></canvas></div></div>
+  </div>
+  <div class="card gfull"><h3>Consumption by Category — Summary</h3><div class="tbl-wrap"><table id="consCatTable"><thead><tr id="consTHead"></tr></thead><tbody id="consTBody"></tbody></table></div></div>
+</section>
+
+<!-- ══════════════ LEAKAGE ══════════════ -->
+<section class="section" id="leakage">
+  <div class="sec-hdr"><div><h2>Leakage &amp; Real Losses</h2><p>Pipe leakage rates, response times, and IWA breakdown</p></div></div>
+  <div class="kpi-grid" id="leakKpis"></div>
+  <div class="g2">
+    <div class="card"><h3>Leakage Incidents per Month</h3><div class="cw"><canvas id="leakCount"></canvas></div></div>
+    <div class="card"><h3>Avg Repair Response Time (hrs)</h3><div class="cw"><canvas id="leakResponse"></canvas></div></div>
+  </div>
+  <div class="g2">
+    <div class="card"><h3>Leakage Density (leaks/km)</h3><div class="cw"><canvas id="leakDensity"></canvas></div></div>
+    <div class="card"><h3>Leaking Tanks per Month</h3><div class="cw"><canvas id="leakTanks"></canvas></div></div>
+  </div>
+  <div class="card gfull">
+    <h3>Real Losses — IWA Breakdown</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:8px">
+      <div id="rlProgress"></div>
+      <div class="cw-sm"><canvas id="rlPie"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ METERS ══════════════ -->
+<section class="section" id="meters">
+  <div class="sec-hdr"><div><h2>Meter Management</h2><p>Inspections, findings, age distribution, and actions</p></div></div>
+  <div class="kpi-grid" id="metKpis"></div>
+  <div class="g2">
+    <div class="card"><h3>Meters Inspected per Month</h3><div class="cw"><canvas id="metInspect"></canvas></div></div>
+    <div class="card"><h3>Meter Age Distribution</h3><div class="cw"><canvas id="metAge"></canvas></div></div>
+  </div>
+  <div class="g2">
+    <div class="card"><h3>Top Fault Findings</h3><div id="metFindings" style="margin-top:6px"></div></div>
+    <div class="card"><h3>Monthly Actions (Retained vs. Serviced)</h3><div class="cw"><canvas id="metActions"></canvas></div></div>
+  </div>
+  <div class="card gfull"><h3 id="metRevTitle">Revenue from Meter Readings</h3><div class="cw"><canvas id="metRevChart"></canvas></div></div>
+</section>
+
+<!-- ══════════════ INTERVENTIONS ══════════════ -->
+<section class="section" id="interventions">
+  <div class="sec-hdr"><div><h2>NRW Reduction Interventions</h2><p>Campaigns, pressure zones, and detection activities</p></div></div>
+  <div class="kpi-grid" id="intKpis"></div>
+  <div class="g2">
+    <div class="card"><h3>NRW Campaigns per Month by DMA</h3><div id="intCampLeg" class="legend"></div><div class="cw"><canvas id="intCampChart"></canvas></div></div>
+    <div class="card"><h3>Zero Consumption Accounts by Month</h3><div class="cw"><canvas id="intZeroCons"></canvas></div></div>
+  </div>
+  <div class="card gfull" style="margin-bottom:18px">
+    <h3>Key Interventions Log</h3>
+    <div class="int-list" id="intList"></div>
+  </div>
+  <div class="card gfull">
+    <h3>Unbilled Metered Authorized by DMA</h3>
+    <div id="intUnbLeg" class="legend"></div>
+    <div class="cw"><canvas id="intUnbChart"></canvas></div>
+  </div>
+</section>
+
+<!-- ══════════════ SYSTEMS ══════════════ -->
+<section class="section" id="systems">
+  <div class="sec-hdr"><div><h2>Water Supply Systems</h2><p>Infrastructure details, operator info, and targets per DMA</p></div></div>
+  <div class="info-grid" id="sysGrid"></div>
+  <div class="card gfull"><h3 id="sysRevTitle">Revenue by Customer Category — Avg per Month</h3><div class="cw"><canvas id="sysRevCat"></canvas></div></div>
+</section>
+
+</main>
+
+<footer>
+  <div style="display:flex;gap:8px;flex-wrap:wrap" id="footerLogos"></div>
+  <div class="fcopy" id="footerCopy">NRW Dashboard · Water Supply Monitoring Tool</div>
+</footer>
+
+<!-- ═══════════════════════════════════════════
+     CONFIG MODAL
+═══════════════════════════════════════════ -->
+<div class="overlay hidden" id="overlay" onclick="overlayClick(event)">
+<div class="modal" onclick="event.stopPropagation()">
+
+  <div class="modal-hdr">
+    <h2>⚙ Configure Dashboard</h2>
+    <button class="mclose" onclick="closeModal()">✕</button>
+  </div>
+
+  <div class="mtabs">
+    <button class="mtab active" onclick="mTab('t-org')" id="mt-org">🏢 Organisation</button>
+    <button class="mtab" onclick="mTab('t-systems')" id="mt-systems">🗺️ WSS &amp; DMAs</button>
+    <button class="mtab" onclick="mTab('t-nrw')" id="mt-nrw">💧 NRW Data</button>
+    <button class="mtab" onclick="mTab('t-cons')" id="mt-cons">📈 Consumption</button>
+    <button class="mtab" onclick="mTab('t-leak')" id="mt-leak">🔴 Leakage</button>
+    <button class="mtab" onclick="mTab('t-met')" id="mt-met">⚙️ Meters</button>
+    <button class="mtab" onclick="mTab('t-iwa')" id="mt-iwa">⚖️ IWA Balance</button>
+    <button class="mtab" onclick="mTab('t-int')" id="mt-int">🛠️ Interventions</button>
+  </div>
+
+  <div class="mbody">
+
+    <!-- ── ORG ── -->
+    <div class="mpanel active" id="t-org">
+      <div class="fsect">
+        <div class="fsect-title">Organisation Identity</div>
+        <div class="fg">
+          <div class="fgrp"><label>District / Region</label><input type="text" id="c-district" placeholder="e.g. Nyabihu District"></div>
+          <div class="fgrp"><label>Private Operator</label><input type="text" id="c-operator" placeholder="e.g. REDEC"></div>
+          <div class="fgrp"><label>Asset Owner / Utility</label><input type="text" id="c-utility" placeholder="e.g. WASAC"></div>
+          <div class="fgrp"><label>Programme / Project</label><input type="text" id="c-programme" placeholder="e.g. VEI Isoko y'Ubuzima"></div>
+          <div class="fgrp"><label>Funding Partner</label><input type="text" id="c-funder" placeholder="e.g. USAID"></div>
+          <div class="fgrp"><label>Programme Period</label><input type="text" id="c-period" placeholder="e.g. 2021–2026"></div>
+          <div class="fgrp"><label>Reporting Year</label><input type="number" id="c-year" placeholder="2023"></div>
+          <div class="fgrp"><label>Currency Symbol</label><input type="text" id="c-currency" placeholder="e.g. USD"></div>
+          <div class="fgrp"><label>Data Period (display text)</label><input type="text" id="c-dataPeriod" placeholder="e.g. Jan–Jun 2023"></div>
+          <div class="fgrp"><label>Country</label><input type="text" id="c-country" placeholder="e.g. Rwanda"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── WSS & DMA ── -->
+    <div class="mpanel" id="t-systems">
+      <div class="fsect">
+        <div class="fsect-title">Water Supply Systems &amp; DMAs</div>
+        <p class="hint" style="margin-bottom:14px">Add one or more Water Supply Systems (WSS). Within each WSS, add the DMAs (District Metered Areas). You can have unlimited WSS and DMAs.</p>
+        <div id="wssContainer"></div>
+        <button class="btn-add" onclick="addWSS()">＋ Add Water Supply System</button>
+      </div>
+    </div>
+
+    <!-- ── NRW DATA ── -->
+    <div class="mpanel" id="t-nrw">
+      <div class="fsect">
+        <div class="fsect-title">Monthly NRW % per DMA (Jan–Jun)</div>
+        <p class="hint" style="margin-bottom:14px">Enter NRW % for each DMA per month. Values are auto-aggregated into charts and KPIs. Add/remove DMAs from the WSS &amp; DMAs tab first.</p>
+        <div id="nrwDataContainer"></div>
+      </div>
+    </div>
+
+    <!-- ── CONSUMPTION ── -->
+    <div class="mpanel" id="t-cons">
+      <div class="fsect">
+        <div class="fsect-title">Monthly Revenue (12 months)</div>
+        <div class="mgrid12" id="revMonthGrid"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="fsect">
+        <div class="fsect-title">Avg Consumption by Category (m³/month)</div>
+        <div class="fg">
+          <div class="fgrp"><label>Institutional</label><input type="number" id="c-consInst" placeholder="2481"></div>
+          <div class="fgrp"><label>Households</label><input type="number" id="c-consHh" placeholder="888"></div>
+          <div class="fgrp"><label>BF / Bulk Feed</label><input type="number" id="c-consBf" placeholder="884"></div>
+          <div class="fgrp"><label>Industrial</label><input type="number" id="c-consInd" placeholder="335"></div>
+          <div class="fgrp"><label>Commercial</label><input type="number" id="c-consCom" placeholder="222"></div>
+          <div class="fgrp"><label>Avg Accounts Billed/month</label><input type="number" id="c-consAccs" placeholder="167"></div>
+          <div class="fgrp"><label>Avg m³/Account</label><input type="number" id="c-consM3Acc" placeholder="52.4" step="0.1"></div>
+          <div class="fgrp"><label>Peak Month Name</label><input type="text" id="c-consPeak" placeholder="Jun"></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="fsect">
+        <div class="fsect-title">Revenue by Category — Avg per Month</div>
+        <div class="fg">
+          <div class="fgrp"><label>Institutional</label><input type="number" id="c-revInst" placeholder="829"></div>
+          <div class="fgrp"><label>Households</label><input type="number" id="c-revHh" placeholder="401"></div>
+          <div class="fgrp"><label>BF / Bulk Feed</label><input type="number" id="c-revBf" placeholder="330"></div>
+          <div class="fgrp"><label>Industrial</label><input type="number" id="c-revInd" placeholder="111"></div>
+          <div class="fgrp"><label>Commercial</label><input type="number" id="c-revCom" placeholder="62"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── LEAKAGE ── -->
+    <div class="mpanel" id="t-leak">
+      <div class="fsect">
+        <div class="fsect-title">Leakage Summary</div>
+        <div class="fg">
+          <div class="fgrp"><label>Total Leakages Recorded</label><input type="number" id="c-leakTotal" placeholder="38"></div>
+          <div class="fgrp"><label>Avg Response Time (hrs)</label><input type="number" id="c-leakResponse" placeholder="22.9" step="0.1"></div>
+          <div class="fgrp"><label>Avg Leaking Tanks/month</label><input type="number" id="c-leakTanks" placeholder="6.4" step="0.1"></div>
+          <div class="fgrp"><label>Peak Leakage Month</label><input type="text" id="c-leakPeakMo" placeholder="Jan/Feb"></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="fsect">
+        <div class="fsect-title">Monthly Leakage Count (Jan–Dec)</div>
+        <div class="mgrid12" id="leakMonthGrid"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="fsect">
+        <div class="fsect-title">Avg Response Time per Month (hrs, Jan–Dec)</div>
+        <div class="mgrid12" id="respMonthGrid"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="fsect">
+        <div class="fsect-title">Leaking Tanks per Month (Jan–Dec)</div>
+        <div class="mgrid12" id="tanksMonthGrid"></div>
+      </div>
+    </div>
+
+    <!-- ── METERS ── -->
+    <div class="mpanel" id="t-met">
+      <div class="fsect">
+        <div class="fsect-title">Meter Summary</div>
+        <div class="fg">
+          <div class="fgrp"><label>Total Inspected</label><input type="number" id="c-metTotal" placeholder="566"></div>
+          <div class="fgrp"><label>Serviced &amp; Returned</label><input type="number" id="c-metServiced" placeholder="249"></div>
+          <div class="fgrp"><label>Retained (Fault)</label><input type="number" id="c-metRetained" placeholder="292"></div>
+          <div class="fgrp"><label>Overall Aged Rate (%)</label><input type="number" id="c-metAgedPct" placeholder="31.5" step="0.1"></div>
+          <div class="fgrp"><label>Total Aged Meters</label><input type="number" id="c-metAgedN" placeholder="164"></div>
+          <div class="fgrp"><label>Total Meter Stock</label><input type="number" id="c-metStock" placeholder="520"></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="fsect">
+        <div class="fsect-title">Inspections per Month (Jan–Jun)</div>
+        <div class="mgrid6" id="metMonthGrid"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="fsect">
+        <div class="fsect-title">Age Distribution (count per era)</div>
+        <div class="fg4">
+          <div class="fgrp"><label>1990–1995</label><input type="number" id="c-age0" placeholder="83"></div>
+          <div class="fgrp"><label>1995–2000</label><input type="number" id="c-age1" placeholder="91"></div>
+          <div class="fgrp"><label>2000–2005</label><input type="number" id="c-age2" placeholder="84"></div>
+          <div class="fgrp"><label>2005–2010</label><input type="number" id="c-age3" placeholder="106"></div>
+          <div class="fgrp"><label>2010–2015</label><input type="number" id="c-age4" placeholder="91"></div>
+          <div class="fgrp"><label>2015–2020</label><input type="number" id="c-age5" placeholder="94"></div>
+          <div class="fgrp"><label>2020–2025</label><input type="number" id="c-age6" placeholder="17"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── IWA ── -->
+    <div class="mpanel" id="t-iwa">
+      <div class="fsect">
+        <div class="fsect-title">IWA Water Balance Components (m³ — cumulative for the reporting period)</div>
+        <div class="fg">
+          <div class="fgrp"><label>System Input Volume (m³)</label><input type="number" id="c-iwaInput" placeholder="1331065"></div>
+          <div class="fgrp"><label>Billed Metered Consumption</label><input type="number" id="c-iwaBillMet" placeholder="113861"></div>
+          <div class="fgrp"><label>Billed Unmetered</label><input type="number" id="c-iwaBillUnmet" placeholder="3416"></div>
+          <div class="fgrp"><label>Unbilled Metered</label><input type="number" id="c-iwaUnbMet" placeholder="228"></div>
+          <div class="fgrp"><label>Unbilled Unmetered</label><input type="number" id="c-iwaUnbUnmet" placeholder="1907"></div>
+          <div class="fgrp"><label>Real Losses (total m³)</label><input type="number" id="c-iwaReal" placeholder="363496"></div>
+          <div class="fgrp"><label>Apparent Losses (total m³)</label><input type="number" id="c-iwaApparent" placeholder="484661"></div>
+          <div class="fgrp"><label>Leakages on Mains (m³)</label><input type="number" id="c-iwaMains" placeholder="242331"></div>
+          <div class="fgrp"><label>Tank Overflows (m³)</label><input type="number" id="c-iwaTanks" placeholder="24233"></div>
+          <div class="fgrp"><label>Service Connection Leaks (m³)</label><input type="number" id="c-iwaSC" placeholder="96932"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── INTERVENTIONS ── -->
+    <div class="mpanel" id="t-int">
+      <div class="fsect">
+        <div class="fsect-title">Summary Counts</div>
+        <div class="fg">
+          <div class="fgrp"><label>Total NRW Campaigns</label><input type="number" id="c-intCamp" placeholder="105"></div>
+          <div class="fgrp"><label>Total NRW Meetings</label><input type="number" id="c-intMeet" placeholder="78"></div>
+          <div class="fgrp"><label>Unregistered Customers Found</label><input type="number" id="c-intUnreg" placeholder="69"></div>
+          <div class="fgrp"><label>Pressure Zones Installed</label><input type="number" id="c-intPZ" placeholder="75"></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="fsect">
+        <div class="fsect-title">Intervention Log (add up to 10)</div>
+        <p class="hint" style="margin-bottom:12px">Log your key NRW interventions. Each entry appears in the Interventions section timeline.</p>
+        <div id="intLogContainer"></div>
+        <button class="btn-add" onclick="addIntRow()">＋ Add Intervention</button>
+      </div>
+    </div>
+
+  </div><!-- /mbody -->
+
+  <div class="mfoot">
+    <div class="save-note"><span class="save-dot"></span>Saved to browser storage automatically</div>
+    <div class="mfooter-btns">
+      <button class="btn btn-danger" onclick="resetDefaults()">↺ Reset to Sample</button>
+      <button class="btn btn-sec" onclick="closeModal()">Close</button>
+      <button class="btn btn-pri" onclick="applyConfig()">✓ Apply &amp; Refresh</button>
+    </div>
+  </div>
+
+</div><!-- /modal -->
+</div><!-- /overlay -->
+
+<div class="toast hidden" id="toast">✓ Dashboard updated</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  PALETTE — 12 distinct colours for unlimited DMAs
+// ═══════════════════════════════════════════════════════════════════
+const PALETTE=[
+  '#38bdf8','#a78bfa','#34d399','#fbbf24','#f87171','#fb923c',
+  '#60a5fa','#e879f9','#4ade80','#facc15','#f472b6','#2dd4bf'
+];
+function dmaColor(i){return PALETTE[i%PALETTE.length]}
+function dmaColorAlpha(i,a=0.15){
+  const h=PALETTE[i%PALETTE.length];
+  const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+const MONTHS6=['Jan','Feb','Mar','Apr','May','Jun'];
+const MONTHS12=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ═══════════════════════════════════════════════════════════════════
+//  DEFAULT CONFIG — Nyabihu sample data
+// ═══════════════════════════════════════════════════════════════════
+const DEFAULT={
+  district:'Nyabihu District', operator:'REDEC', utility:'WASAC',
+  programme:"VEI Isoko y'Ubuzima", funder:'USAID', period:'2021–2026',
+  year:'2023', currency:'USD', dataPeriod:'Jan–Jun 2023', country:'Rwanda',
+  // WSS array — each has {id, name, systemType, constructionYear, status, dmas:[]}
+  // DMA: {id, name, target, km, connections, agedPct, agedN, totalMeters, nrw:[6], campaigns:[6], zeroCons:[6], unbilled:[6]}
+  systems:[
+    {id:'wss1', name:'Cyamabuye-Kagohe', systemType:'Pumping', constructionYear:'2008', reservoirs:'28', status:'Partial',
+      dmas:[
+        {id:'d1', name:'Bigogwe',  target:30, km:120, connections:1200, agedPct:27,   agedN:54,  totalMeters:200,
+          nrw:[55.6,43.3,66.9,54.9,63.2,56.9], campaigns:[1,9,14,17,10,19], zeroCons:[42,85,74,29,58,35], unbilled:[14,73,35,39,32,17]},
+        {id:'d2', name:'Mukamira', target:35, km:110, connections:900,  agedPct:34.4, agedN:110, totalMeters:320,
+          nrw:[74.3,65.3,81.6,70.6,75.5,66.4], campaigns:[10,9,12,4,15,0], zeroCons:[99,35,29,47,60,56], unbilled:[26,60,80,78,67,93]},
+      ]
+    },
+    {id:'wss2', name:'Waruvumbu-Matiyo-Kajagali', systemType:'Gravity', constructionYear:'2015', reservoirs:'1', status:'Partial',
+      dmas:[
+        {id:'d3', name:'Waruvumbu', target:35, km:100, connections:146, agedPct:0, agedN:0, totalMeters:0,
+          nrw:[63.1,67.3,68.6,68.0,66.3,67.7], campaigns:[2,10,16,19,11,6], zeroCons:[82,47,84,96,84,97], unbilled:[97,17,61,25,38,23]},
+      ]
+    }
+  ],
+  // Global monthly data
+  revMonthly:[5133,4718,4563,4789,5056,6747,0,0,0,0,4598,4387],
+  consInst:2481, consHh:888, consBf:884, consInd:335, consCom:222,
+  consAccs:167, consM3Acc:52.4, consPeak:'Jun',
+  revInst:829, revHh:401, revBf:330, revInd:111, revCom:62,
+  leakTotal:38, leakResponse:22.9, leakTanks:6.4, leakPeakMo:'Jan/Feb',
+  leakMonthly:[7,7,3,3,6,2,4,2,1,1,1,1],
+  respMonthly:[22,24,27.7,23.3,24,22.5,21.75,11.5,26,null,null,24],
+  tanksMonthly:[0,10,7,12,9,10,3,9,11,0,0,0],
+  metTotal:566, metServiced:249, metRetained:292,
+  metAgedPct:31.5, metAgedN:164, metStock:520,
+  metMonthly:[106,78,94,106,84,98],
+  meterAge:[83,91,84,106,91,94,17],
+  iwaInput:1331065, iwaBillMet:113861, iwaBillUnmet:3416,
+  iwaUnbMet:228, iwaUnbUnmet:1907,
+  iwaReal:363496, iwaApparent:484661,
+  iwaMains:242331, iwaTanks:24233, iwaSC:96932,
+  intCamp:105, intMeet:78, intUnreg:69, intPZ:75,
+  interventions:[
+    {month:'Jan 23',title:'NRW Reduction Strategy — Bigogwe',meta:'Bigogwe DMA · Leakage reduction protocol rollout',cost:'RWF 500,000'},
+    {month:'Jan 23',title:'Meter Service Action — Mukamira',meta:'Mukamira DMA · Scheduled meter calibration',cost:'RWF 50,000'},
+    {month:'Mar 23',title:'NRW Activity — Mukamira',meta:'Mukamira DMA · Field leakage detection',cost:'RWF 105,000'},
+    {month:'May 23',title:'Smart Meter Installation — Bigogwe',meta:'Bigogwe DMA · Billing accuracy improvement',cost:'RWF 100,000'},
+    {month:'May 23',title:'Additional Plumbers Hired',meta:'All DMAs · Faster leakage repair response',cost:'RWF 750,000'},
+    {month:'Jun 23',title:'5 Illegal Connections Removed',meta:'Mukamira & Waruvumbu · Fines collected',cost:'RWF 200,500'},
+  ]
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════
+let C={};
+const CHARTS={};
+let filterWSS='all', filterDMA='all', filterPeriod='all';
+
+// ═══════════════════════════════════════════════════════════════════
+//  STORAGE
+// ═══════════════════════════════════════════════════════════════════
+function save(){try{localStorage.setItem('nrw_v3',JSON.stringify(C));}catch(e){}}
+function load(){try{const r=localStorage.getItem('nrw_v3');if(r)return JSON.parse(r);}catch(e){}return null;}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CHART HELPERS
+// ═══════════════════════════════════════════════════════════════════
+Chart.defaults.color='#64748b';
+Chart.defaults.borderColor='rgba(99,179,237,0.08)';
+Chart.defaults.font.family="'DM Sans',sans-serif";
+Chart.defaults.font.size=11;
+
+function mkChart(id,type,data,opts={}){
+  if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];}
+  const ctx=document.getElementById(id);
+  if(!ctx)return;
+  CHARTS[id]=new Chart(ctx,{type,data,options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},...opts}});
+  return CHARTS[id];
+}
+function mkPie(id,labels,data,colors){
+  if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];}
+  const ctx=document.getElementById(id); if(!ctx)return;
+  CHARTS[id]=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderColor:'#111827',borderWidth:3}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{display:true,position:'bottom',labels:{color:'#64748b',boxWidth:9,padding:10,font:{size:10}}}}}});
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  GET FILTERED DMAS
+// ═══════════════════════════════════════════════════════════════════
+function getAllDMAs(){
+  const out=[];
+  (C.systems||[]).forEach((w,wi)=>{
+    (w.dmas||[]).forEach((d,di)=>{
+      const gi=out.length; // global index for colour
+      out.push({...d, wssName:w.name, wssId:w.id, wssIdx:wi, dmaIdx:di, globalIdx:gi});
+    });
+  });
+  return out;
+}
+function getFilteredDMAs(){
+  return getAllDMAs().filter(d=>{
+    if(filterWSS!=='all'&&d.wssId!==filterWSS)return false;
+    if(filterDMA!=='all'&&d.id!==filterDMA)return false;
+    return true;
+  });
+}
+function getMonthRange(){
+  if(filterPeriod==='q1')return{start:0,end:3,labels:['Jan','Feb','Mar']};
+  if(filterPeriod==='q2')return{start:3,end:6,labels:['Apr','May','Jun']};
+  if(filterPeriod==='q3')return{start:6,end:9,labels:['Jul','Aug','Sep']};
+  if(filterPeriod==='q4')return{start:9,end:12,labels:['Oct','Nov','Dec']};
+  return{start:0,end:6,labels:MONTHS6};
+}
+function sliceNRW(arr){const{start,end}=getMonthRange(); return(arr||[]).slice(start,Math.min(end,arr.length));}
+
+// ═══════════════════════════════════════════════════════════════════
+//  FILTER BAR
+// ═══════════════════════════════════════════════════════════════════
+function buildFilters(){
+  const wssEl=document.getElementById('filterWSS');
+  const dmaEl=document.getElementById('filterDMA');
+  const wssVal=wssEl.value||'all', dmaVal=dmaEl.value||'all';
+  wssEl.innerHTML='<option value="all">All Systems</option>';
+  dmaEl.innerHTML='<option value="all">All DMAs</option>';
+  (C.systems||[]).forEach(w=>{
+    const o=document.createElement('option');
+    o.value=w.id; o.textContent=w.name; wssEl.appendChild(o);
+  });
+  getAllDMAs().forEach(d=>{
+    const o=document.createElement('option');
+    o.value=d.id; o.textContent=`${d.name} (${d.wssName})`; dmaEl.appendChild(o);
+  });
+  wssEl.value=wssVal; dmaEl.value=dmaVal;
+}
+function applyFilter(){
+  filterWSS=document.getElementById('filterWSS').value;
+  filterDMA=document.getElementById('filterDMA').value;
+  filterPeriod=document.getElementById('filterPeriod').value;
+  renderDashboard();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  RENDER DASHBOARD
+// ═══════════════════════════════════════════════════════════════════
+function renderDashboard(){
+  buildFilters();
+  const dmas=getFilteredDMAs();
+  const allDmas=getAllDMAs();
+  const mr=getMonthRange();
+  const cur=C.currency||'USD';
+
+  // HEADER
+  const sys=(C.systems||[]).map(w=>w.name).join(' & ');
+  document.getElementById('hdrTitle').textContent=`NRW Dashboard — ${C.district||'Water Supply'}`;
+  document.getElementById('hdrSub').textContent=`${C.utility||''} / ${C.operator||''} · ${sys} · ${C.year||''}`;
+  document.getElementById('hdrBadge2').textContent=(C.operator||'Operator')+' Operator';
+  document.getElementById('hdrBadge3').textContent=C.programme||'–';
+  document.title=`NRW Dashboard — ${C.district||'Water Supply'}`;
+
+  // FOOTER
+  document.getElementById('footerLogos').innerHTML=[C.utility,C.operator,C.programme,C.funder].filter(Boolean).map(t=>`<span class="ftag">${t}</span>`).join('');
+  document.getElementById('footerCopy').textContent=`NRW Dashboard — ${C.district||''} · ${C.dataPeriod||''} · Water Supply Monitoring Tool`;
+
+  renderOverview(dmas,allDmas,mr,cur);
+  renderNRW(dmas,allDmas,mr,cur);
+  renderConsumption(cur);
+  renderLeakage(dmas,allDmas,cur);
+  renderMeters(cur);
+  renderInterventions(dmas,allDmas,mr);
+  renderSystems(cur);
+}
+
+// ═══ OVERVIEW ═══
+function renderOverview(dmas,allDmas,mr,cur){
+  document.getElementById('ovSub').textContent=`Key KPIs across ${allDmas.length} DMA${allDmas.length!==1?'s':''} in ${(C.systems||[]).length} WSS`;
+  document.getElementById('ovPeriod').textContent=`Period: ${C.dataPeriod||'–'}`;
+
+  // KPIs
+  const totalConn=allDmas.reduce((s,d)=>s+(+d.connections||0),0);
+  const totalRev=(C.revMonthly||[]).reduce((s,v)=>s+(+v||0),0);
+  const realPct=C.iwaInput>0?(C.iwaReal/C.iwaInput*100).toFixed(1):0;
+  const appPct=C.iwaInput>0?(C.iwaApparent/C.iwaInput*100).toFixed(1):0;
+  const avgNRWAll=dmas.length?avg(dmas.map(d=>avg(sliceNRW(d.nrw)))):0;
+
+  let kpiHTML=`
+    <div class="kpi ${avgNRWAll>50?'red':avgNRWAll>30?'amber':'green'}"><span class="kpi-ico">💧</span>
+      <div class="kpi-lbl">Avg NRW — All DMAs</div>
+      <div class="kpi-val ${nrwClass(avgNRWAll)}">${avgNRWAll.toFixed(1)}%</div>
+      <div class="kpi-sub">${dmas.length} DMA${dmas.length!==1?'s':''} · ${mr.labels[0]}–${mr.labels[mr.labels.length-1]}</div>
+    </div>`;
+  dmas.forEach(d=>{
+    const a=avg(sliceNRW(d.nrw));
+    const diff=(a-d.target).toFixed(1);
+    kpiHTML+=`<div class="kpi ${nrwCard(a,d.target)}"><div class="kpi-lbl">NRW — ${d.name}</div>
+      <div class="kpi-val ${nrwClass(a)}">${a.toFixed(1)}%</div>
+      <div class="kpi-sub">Target: ${d.target}% · Δ ${diff>0?'+':''}${diff}pp</div></div>`;
+  });
+  kpiHTML+=`
+    <div class="kpi blue"><span class="kpi-ico">🏠</span><div class="kpi-lbl">Total Connections</div><div class="kpi-val blue">${totalConn.toLocaleString()}</div><div class="kpi-sub">Across all WSS</div></div>
+    <div class="kpi green"><span class="kpi-ico">💰</span><div class="kpi-lbl">Total Revenue</div><div class="kpi-val green">${cur}${Math.round(totalRev).toLocaleString()}</div><div class="kpi-sub">${C.dataPeriod||'–'}</div></div>
+    <div class="kpi red"><span class="kpi-ico">📉</span><div class="kpi-lbl">Real Losses (IWA)</div><div class="kpi-val red">${fmtLarge(C.iwaReal)}</div><div class="kpi-sub">m³ — ${realPct}% of input</div></div>
+    <div class="kpi amber"><span class="kpi-ico">🔍</span><div class="kpi-lbl">Apparent Losses</div><div class="kpi-val amber">${fmtLarge(C.iwaApparent)}</div><div class="kpi-sub">m³ — ${appPct}% of input</div></div>`;
+  document.getElementById('ovKpis').innerHTML=kpiHTML;
+
+  // NRW overview chart
+  document.getElementById('ovNrwTitle').textContent=`NRW % All DMAs vs. Targets — ${mr.labels[0]}–${mr.labels[mr.labels.length-1]}`;
+  const nrwDatasets=dmas.map(d=>({label:d.name,data:sliceNRW(d.nrw),backgroundColor:dmaColor(d.globalIdx)+'cc',borderRadius:4}));
+  dmas.forEach(d=>nrwDatasets.push({label:`Target ${d.name}`,data:Array(mr.labels.length).fill(d.target),type:'line',borderColor:'rgba(251,191,36,0.6)',borderDash:[4,4],pointRadius:0,fill:false,borderWidth:1.5}));
+  mkChart('ovNrwChart','bar',{labels:mr.labels,datasets:nrwDatasets},{plugins:{legend:{display:true,labels:{color:'#64748b',boxWidth:9,font:{size:10}}}},scales:{y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}}});
+  buildLegend('ovLegend',dmas);
+
+  // IWA Pie
+  const inp=+C.iwaInput||1;
+  const billed=((C.iwaBillMet||0)+(C.iwaBillUnmet||0))/inp*100;
+  mkPie('ovIwaPie',['Billed','Real Losses','Apparent Losses','Unbilled Auth'],[billed.toFixed(2),realPct,appPct,((C.iwaUnbMet+C.iwaUnbUnmet)/inp*100).toFixed(2)],['rgba(52,211,153,.85)','rgba(248,113,113,.85)','rgba(251,191,36,.85)','rgba(56,189,248,.85)']);
+
+  // Revenue
+  const revL=[],revV=[];
+  (C.revMonthly||[]).forEach((v,i)=>{if(+v>0){revL.push(MONTHS12[i]);revV.push(+v);}});
+  document.getElementById('ovRevTitle').textContent=`Monthly Revenue (${cur})`;
+  mkChart('ovRevChart','bar',{labels:revL,datasets:[{label:'Revenue',data:revV,backgroundColor:'rgba(52,211,153,.7)',borderRadius:4}]},{scales:{y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{callback:v=>cur+v.toLocaleString()}},x:{grid:{display:false}}}});
+
+  // Category chart
+  mkChart('ovCatChart','bar',{labels:['BF','Commercial','Households','Industrial','Institutional'],datasets:[{data:[+C.consBf,+C.consCom,+C.consHh,+C.consInd,+C.consInst],backgroundColor:[dmaColor(0),dmaColor(2),'#60a5fa',dmaColor(1),'rgba(251,191,36,.85)'],borderRadius:5}]},{indexAxis:'y',scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{callback:v=>v+' m³'}},y:{grid:{display:false}}}});
+
+  // DMA table
+  let tbody='';
+  allDmas.forEach(d=>{
+    const nrwVals=d.nrw||[];
+    const a=avg(nrwVals.slice(0,6));
+    const diff=a-d.target;
+    tbody+=`<tr>
+      <td>${d.wssName}</td>
+      <td><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:${dmaColor(d.globalIdx)};flex-shrink:0"></span>${d.name}</span></td>
+      <td class="tm">${d.target}%</td>
+      ${nrwVals.slice(0,6).map(v=>`<td class="tm ${nrwClass(v)}">${v?v.toFixed(1)+'%':'–'}</td>`).join('')}
+      <td class="tm ${nrwClass(a)}">${a.toFixed(1)}%</td>
+      <td><span class="pill ${nrwPill(a,d.target)}">${diff>15?'Critical':diff>0?'Above Target':'On Target'}</span></td>
+    </tr>`;
+  });
+  document.getElementById('ovDmaBody').innerHTML=tbody;
+}
+
+// ═══ NRW ANALYSIS ═══
+function renderNRW(dmas,allDmas,mr,cur){
+  // KPIs
+  let khtml='';
+  dmas.forEach(d=>{
+    const vals=sliceNRW(d.nrw).filter(v=>v>0);
+    const best=vals.length?Math.min(...vals):0;
+    const worst=vals.length?Math.max(...vals):0;
+    const a=avg(vals);
+    khtml+=`<div class="kpi ${nrwCard(a,d.target)}">
+      <div class="kpi-lbl">${d.name}</div>
+      <div class="kpi-val ${nrwClass(a)}">${a.toFixed(1)}%</div>
+      <div class="kpi-sub">Best: ${best.toFixed(1)}% · Worst: ${worst.toFixed(1)}% · Target: ${d.target}%</div>
+    </div>`;
+  });
+  const inp=+C.iwaInput||1;
+  const appPct=(C.iwaApparent/inp*100).toFixed(1);
+  khtml+=`<div class="kpi amber"><div class="kpi-lbl">Apparent Losses (IWA)</div><div class="kpi-val amber">${appPct}%</div><div class="kpi-sub">${(+C.iwaApparent).toLocaleString()} m³</div></div>`;
+  document.getElementById('nrwKpis').innerHTML=khtml;
+
+  // Trend chart all DMAs
+  document.getElementById('nrwTrendTitle').textContent=`NRW % Trend — ${dmas.map(d=>d.name).join(', ')}`;
+  const trendDS=dmas.map(d=>({label:d.name,data:sliceNRW(d.nrw),borderColor:dmaColor(d.globalIdx),backgroundColor:dmaColorAlpha(d.globalIdx,.1),fill:dmas.length===1,tension:.4,pointRadius:4,borderWidth:2}));
+  dmas.forEach(d=>trendDS.push({label:`Target ${d.name}`,data:Array(mr.labels.length).fill(d.target),borderColor:'rgba(251,191,36,.55)',borderDash:[5,5],pointRadius:0,fill:false,borderWidth:1.5}));
+  mkChart('nrwTrendChart','line',{labels:mr.labels,datasets:trendDS},{plugins:{legend:{display:true,labels:{color:'#64748b',boxWidth:9,font:{size:10}}}},scales:{y:{min:0,max:100,grid:{color:'rgba(255,255,255,.04)'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}}});
+  buildLegend('nrwLegend',dmas);
+
+  // Per-DMA mini charts
+  const cont=document.getElementById('nrwDmaCards');
+  cont.innerHTML='';
+  dmas.forEach(d=>{
+    const div=document.createElement('div');
+    div.className='card';
+    const cid='dmaChart_'+d.id;
+    div.innerHTML=`<h3>${d.name} — ${d.wssName}</h3><div class="cw"><canvas id="${cid}"></canvas></div>`;
+    cont.appendChild(div);
+    setTimeout(()=>{
+      mkChart(cid,'line',{labels:mr.labels,datasets:[
+        {label:'NRW %',data:sliceNRW(d.nrw),borderColor:dmaColor(d.globalIdx),backgroundColor:dmaColorAlpha(d.globalIdx,.12),fill:true,tension:.4,pointRadius:4,borderWidth:2},
+        {label:`Target (${d.target}%)`,data:Array(mr.labels.length).fill(d.target),borderColor:'rgba(251,191,36,.8)',borderDash:[5,5],pointRadius:0,fill:false,borderWidth:1.5}
+      ]},{plugins:{legend:{display:true,labels:{color:'#64748b',boxWidth:9,font:{size:10}}}},scales:{y:{min:0,max:100,grid:{color:'rgba(255,255,255,.04)'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}}});
+    },50);
+  });
+
+  // IWA Tree
+  document.getElementById('iwaTree').innerHTML=buildIWATree(inp);
+}
+
+// ═══ CONSUMPTION ═══
+function renderConsumption(cur){
+  const peakRev=Math.max(...(C.revMonthly||[]).map(v=>+v||0));
+  const peakIdx=(C.revMonthly||[]).findIndex(v=>+v===peakRev);
+  document.getElementById('consKpis').innerHTML=`
+    <div class="kpi blue"><div class="kpi-lbl">Avg Monthly Total</div><div class="kpi-val blue">${Math.round(((+C.consInst||0)+(+C.consHh||0)+(+C.consBf||0)+(+C.consInd||0)+(+C.consCom||0))/5).toLocaleString()}</div><div class="kpi-sub">m³ avg across categories</div></div>
+    <div class="kpi amber"><div class="kpi-lbl">Peak Month</div><div class="kpi-val amber">${C.consPeak||'–'}</div><div class="kpi-sub">Highest billed period</div></div>
+    <div class="kpi green"><div class="kpi-lbl">Avg Accounts Billed</div><div class="kpi-val green">${+C.consAccs||0}</div><div class="kpi-sub">per month</div></div>
+    <div class="kpi amber"><div class="kpi-lbl">Institutional Avg</div><div class="kpi-val amber">${(+C.consInst||0).toLocaleString()}</div><div class="kpi-sub">m³/month — largest category</div></div>
+    <div class="kpi purple"><div class="kpi-lbl">Avg m³/Account</div><div class="kpi-val" style="color:#a78bfa">${+C.consM3Acc||0}</div><div class="kpi-sub">overall average</div></div>
+    <div class="kpi blue"><div class="kpi-lbl">Total Revenue</div><div class="kpi-val blue">${cur+((C.revMonthly||[]).reduce((s,v)=>s+(+v||0),0)).toLocaleString()}</div><div class="kpi-sub">${C.dataPeriod||'–'}</div></div>`;
+
+  const stackData=[[2505,2206,2201,2362,2579,3033],[873,870,841,899,808,1035],[790,688,723,631,794,1681],[327,310,273,367,352,380],[194,224,237,218,212,248]];
+  mkChart('consStack','bar',{labels:MONTHS6,datasets:[
+    {label:'Institutional',data:stackData[0],backgroundColor:'rgba(251,191,36,.75)',borderRadius:2},
+    {label:'Households',data:stackData[1],backgroundColor:'rgba(96,165,250,.75)',borderRadius:2},
+    {label:'BF',data:stackData[2],backgroundColor:'rgba(56,189,248,.75)',borderRadius:2},
+    {label:'Industrial',data:stackData[3],backgroundColor:'rgba(167,139,250,.75)',borderRadius:2},
+    {label:'Commercial',data:stackData[4],backgroundColor:'rgba(52,211,153,.75)',borderRadius:2},
+  ]},{plugins:{legend:{display:true,labels:{color:'#64748b',boxWidth:9,font:{size:10}}}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{callback:v=>v+' m³'}}}});
+
+  mkChart('consAccs','bar',{labels:MONTHS6,datasets:[{label:'Accounts',data:[146,159,161,138,154,243],backgroundColor:'rgba(56,189,248,.7)',borderRadius:4}]},{scales:{y:{grid:{color:'rgba(255,255,255,.04)'}},x:{grid:{display:false}}}});
+  mkChart('consM3Acc','bar',{labels:['BF','Commercial','Households','Industrial','Institutional'],datasets:[
+    {label:'Jan',data:[31.6,27.6,24.5,66.9,140.0],backgroundColor:'rgba(56,189,248,.6)',borderRadius:3},
+    {label:'Jun',data:[44.9,25.7,7.4,51.3,116.0],backgroundColor:'rgba(52,211,153,.6)',borderRadius:3},
+  ]},{plugins:{legend:{display:true,labels:{color:'#64748b',boxWidth:9,font:{size:10}}}},scales:{y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{callback:v=>v+' m³'}},x:{grid:{display:false}}}});
+
+  // Table
+  const cats=[{n:'Institutional',d:stackData[0],a:22.9,m:115.5,cls:'p-warn'},{n:'Households',d:stackData[1],a:765.5,m:19.4,cls:'p-grn'},{n:'BF',d:stackData[2],a:26.2,m:38,cls:'p-blue'},{n:'Industrial',d:stackData[3],a:9.2,m:70.2,cls:''},{n:'Commercial',d:stackData[4],a:9.7,m:19,cls:'p-grn'}];
+  document.getElementById('consTHead').innerHTML='<th>Category</th>'+MONTHS6.map(m=>`<th>${m} (m³)</th>`).join('')+'<th>Avg (m³)</th><th>Avg Accs</th><th>m³/Acc</th>';
+  document.getElementById('consTBody').innerHTML=cats.map(r=>`<tr><td><span class="pill ${r.cls}">${r.n}</span></td>${r.d.map(v=>`<td class="tm">${v.toLocaleString()}</td>`).join('')}<td class="tm twarn">${Math.round(r.d.reduce((a,b)=>a+b,0)/6).toLocaleString()}</td><td class="tm">${r.a}</td><td class="tm">${r.m}</td></tr>`).join('');
+}
+
+// ═══ LEAKAGE ═══
+function renderLeakage(dmas,allDmas,cur){
+  const totalKm=allDmas.reduce((s,d)=>s+(+d.km||0),0);
+  const realPct=C.iwaInput>0?(C.iwaReal/C.iwaInput*100).toFixed(1):0;
+  document.getElementById('leakKpis').innerHTML=`
+    <div class="kpi red"><div class="kpi-lbl">Total Leakages</div><div class="kpi-val red">${+C.leakTotal||0}</div><div class="kpi-sub">${C.dataPeriod||'–'}</div></div>
+    <div class="kpi amber"><div class="kpi-lbl">Avg Response Time</div><div class="kpi-val amber">${C.leakResponse||0} hrs</div><div class="kpi-sub">All months average</div></div>
+    <div class="kpi red"><div class="kpi-lbl">Peak Month</div><div class="kpi-val red">${C.leakPeakMo||'–'}</div><div class="kpi-sub">Highest leakage rate</div></div>
+    <div class="kpi amber"><div class="kpi-lbl">Avg Leaking Tanks</div><div class="kpi-val amber">${C.leakTanks||0}</div><div class="kpi-sub">tanks/month avg</div></div>
+    <div class="kpi blue"><div class="kpi-lbl">Total Network</div><div class="kpi-val blue">${totalKm} km</div><div class="kpi-sub">${allDmas.map(d=>d.name+': '+d.km+'km').join(' · ')}</div></div>
+    <div class="kpi red"><div class="kpi-lbl">IWA Real Losses</div><div class="kpi-val red">${fmtLarge(C.iwaReal)}</div><div class="kpi-sub">m³ — ${realPct}% of input</div></div>`;
+
+  mkChart('leakCount','bar',{labels:MONTHS12,datasets:[{label:'Leakages',data:C.leakMonthly||[],backgroundColor:'rgba(248,113,113,.75)',borderRadius:4}]},{scales:{y:{grid:{color:'rgba(255,255,255,.04)'}},x:{grid:{display:false}}}});
+  const respL=[],respV=[];
+  (C.respMonthly||[]).forEach((v,i)=>{if(v!=null&&v!==''){respL.push(MONTHS12[i]);respV.push(+v);}});
+  mkChart('leakResponse','line',{labels:respL,datasets:[{label:'Hrs',data:respV,borderColor:'rgba(251,191,36,.85)',backgroundColor:'rgba(251,191,36,.1)',fill:true,tension:.4,pointRadius:4,borderWidth:2}]},{scales:{y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{callback:v=>v+' hrs'}},x:{grid:{display:false}}}});
+  const density=(C.leakMonthly||[]).map(v=>totalKm>0?(+v/totalKm).toFixed(4):0);
+  mkChart('leakDensity','bar',{labels:MONTHS12,datasets:[{label:'Leaks/km',data:density,backgroundColor:'rgba(248,113,113,.45)',borderRadius:3}]},{scales:{y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{callback:v=>parseFloat(v).toFixed(3)+'/km'}},x:{grid:{display:false}}}});
+  mkChart('leakTanks','line',{labels:MONTHS12,datasets:[{label:'Tanks',data:C.tanksMonthly||[],borderColor:'#f87171',backgroundColor:'rgba(248,113,113,.1)',fill:true,tension:.4,pointRadius:4,borderWidth:2}]},{scales:{y:{grid:{color:'rgba(255,255,255,.04)'}},x:{grid:{display:false}}}});
+  const rl=+C.iwaReal||1;
+  const mp=(C.iwaMains/rl*100).toFixed(1),sp=(C.iwaSC/rl*100).toFixed(1),tp=(C.iwaTanks/rl*100).toFixed(1);
+  document.getElementById('rlProgress').innerHTML=[['Leakages on Mains',C.iwaMains,mp,'var(--danger)'],['Service Connections',C.iwaSC,sp,'var(--warn)'],['Tank Overflows',C.iwaTanks,tp,'var(--accent)']].map(([l,v,p,c])=>`<div class="prog-wrap"><div class="prog-lbl"><span>${l}</span><span style="color:${c}">${(+v).toLocaleString()} m³ (${p}%)</span></div><div class="prog-bar"><div class="prog-fill" style="width:${p}%;background:${c}"></div></div></div>`).join('');
+  mkPie('rlPie',['Mains Leakage','Service Connections','Tank Overflows'],[+C.iwaMains,+C.iwaSC,+C.iwaTanks],['rgba(248,113,113,.85)','rgba(251,191,36,.85)','rgba(56,189,248,.85)']);
+}
+
+// ═══ METERS ═══
+function renderMeters(cur){
+  const svcPct=C.metTotal>0?((C.metServiced/C.metTotal)*100).toFixed(0):0;
+  const retPct=C.metTotal>0?((C.metRetained/C.metTotal)*100).toFixed(1):0;
+  document.getElementById('metKpis').innerHTML=`
+    <div class="kpi blue"><div class="kpi-lbl">Total Inspected</div><div class="kpi-val blue">${(+C.metTotal||0).toLocaleString()}</div><div class="kpi-sub">${C.dataPeriod||'–'}</div></div>
+    <div class="kpi green"><div class="kpi-lbl">Serviced &amp; Returned</div><div class="kpi-val green">${+C.metServiced||0}</div><div class="kpi-sub">${svcPct}% of inspected</div></div>
+    <div class="kpi amber"><div class="kpi-lbl">Retained (Fault)</div><div class="kpi-val amber">${+C.metRetained||0}</div><div class="kpi-sub">${retPct}% retained</div></div>
+    <div class="kpi red"><div class="kpi-lbl">Overall Aged Rate</div><div class="kpi-val red">${C.metAgedPct||0}%</div><div class="kpi-sub">${C.metAgedN||0} of ${C.metStock||0} aged</div></div>`;
+
+  mkChart('metInspect','bar',{labels:MONTHS6,datasets:[{label:'Inspected',data:C.metMonthly||[],backgroundColor:'rgba(56,189,248,.75)',borderRadius:4}]},{scales:{y:{grid:{color:'rgba(255,255,255,.04)'}},x:{grid:{display:false}}}});
+  mkChart('metAge','bar',{labels:['1990-95','1995-00','2000-05','2005-10','2010-15','2015-20','2020-25'],datasets:[{data:C.meterAge||[],borderRadius:4,backgroundColor:(C.meterAge||[]).map((_,i)=>i<=1?'rgba(248,113,113,.75)':i<=3?'rgba(251,191,36,.75)':'rgba(52,211,153,.75)')}]},{scales:{y:{grid:{color:'rgba(255,255,255,.04)'}},x:{grid:{display:false}}}});
+  const finds=[['Piston stuck/damaged',157],['Counter not readable',113],['Leaking',82],['Blocked propeller',71],['Damaged counter glass',29],['Damaged meter cap',22],['Clogged counter',31],['CTR reg. problem',12],['Sensitive indicator out',9],['Missing counter/cap',6]];
+  document.getElementById('metFindings').innerHTML=finds.map(([l,n])=>`<div class="find-row"><div class="find-lbl">${l}</div><div class="find-bg"><div class="find-fill" style="width:${(n/157*100).toFixed(0)}%"></div></div><div class="find-n">${n}</div></div>`).join('');
+  mkChart('metActions','bar',{labels:MONTHS6,datasets:[{label:'Retained',data:[63,39,49,53,40,48],backgroundColor:'rgba(251,191,36,.75)',borderRadius:3},{label:'Serviced',data:[33,35,41,53,37,50],backgroundColor:'rgba(52,211,153,.75)',borderRadius:3}]},{plugins:{legend:{display:true,labels:{color:'#64748b',boxWidth:9,font:{size:10}}}},scales:{y:{grid:{color:'rgba(255,255,255,.04)'}},x:{grid:{display:false}}}});
+  const revL=[],revV=[];
+  (C.revMonthly||[]).forEach((v,i)=>{if(+v>0){revL.push(MONTHS12[i]);revV.push(+v);}});
+  document.getElementById('metRevTitle').textContent=`Revenue from Meter Readings (${cur})`;
+  mkChart('metRevChart','line',{labels:revL,datasets:[{label:'Revenue',data:revV,borderColor:'rgba(52,211,153,.85)',backgroundColor:'rgba(52,211,153,.08)',fill:true,tension:.4,pointRadius:5,borderWidth:2}]},{scales:{y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{callback:v=>cur+v.toLocaleString()}},x:{grid:{display:false}}}});
+}
+
+// ═══ INTERVENTIONS ═══
+function renderInterventions(dmas,allDmas,mr){
+  document.getElementById('intKpis').innerHTML=`
+    <div class="kpi blue"><div class="kpi-lbl">Total NRW Campaigns</div><div class="kpi-val blue">${+C.intCamp||0}</div><div class="kpi-sub">${C.dataPeriod||'–'}</div></div>
+    <div class="kpi blue"><div class="kpi-lbl">NRW Meetings Held</div><div class="kpi-val blue">${+C.intMeet||0}</div><div class="kpi-sub">All DMAs total</div></div>
+    <div class="kpi red"><div class="kpi-lbl">Unregistered Found</div><div class="kpi-val red">${+C.intUnreg||0}</div><div class="kpi-sub">Customers detected</div></div>
+    <div class="kpi amber"><div class="kpi-lbl">Pressure Zones</div><div class="kpi-val amber">${+C.intPZ||0}</div><div class="kpi-sub">Total installed</div></div>`;
+
+  buildLegend('intCampLeg',dmas);
+  buildLegend('intUnbLeg',dmas);
+
+  const campDS=dmas.map(d=>({label:d.name,data:(d.campaigns||MONTHS6.map(()=>0)).slice(0,mr.labels.length),backgroundColor:dmaColor(d.globalIdx)+'bb',borderRadius:3}));
+  mkChart('intCampChart','bar',{labels:mr.labels,datasets:campDS},{plugins:{legend:{display:true,labels:{color:'#64748b',boxWidth:9,font:{size:10}}}},scales:{y:{grid:{color:'rgba(255,255,255,.04)'}},x:{grid:{display:false}}}});
+
+  const zeroDS=dmas.map(d=>({label:d.name,data:(d.zeroCons||MONTHS6.map(()=>0)).slice(0,mr.labels.length),borderColor:dmaColor(d.globalIdx),fill:false,tension:.4,pointRadius:4,borderWidth:2}));
+  mkChart('intZeroCons','line',{labels:mr.labels,datasets:zeroDS},{plugins:{legend:{display:true,labels:{color:'#64748b',boxWidth:9,font:{size:10}}}},scales:{y:{grid:{color:'rgba(255,255,255,.04)'}},x:{grid:{display:false}}}});
+
+  document.getElementById('intList').innerHTML=(C.interventions||[]).filter(i=>i.title).map(i=>`<div class="int-item"><div class="int-mo">${i.month}</div><div class="int-body"><div class="int-title">${i.title}</div><div class="int-meta">${i.meta||''}</div></div><div class="int-cost">${i.cost||''}</div></div>`).join('')||'<div style="color:var(--muted);font-size:12px;padding:10px">No interventions logged — add them in Configure → Interventions.</div>';
+
+  const unbDS=dmas.map(d=>({label:d.name,data:(d.unbilled||MONTHS6.map(()=>0)).slice(0,mr.labels.length),backgroundColor:dmaColor(d.globalIdx)+'bb',borderRadius:3}));
+  mkChart('intUnbChart','bar',{labels:mr.labels,datasets:unbDS},{plugins:{legend:{display:true,labels:{color:'#64748b',boxWidth:9,font:{size:10}}}},scales:{y:{grid:{color:'rgba(255,255,255,.04)'}},x:{grid:{display:false}}}});
+}
+
+// ═══ SYSTEMS ═══
+function renderSystems(cur){
+  const allDmas=getAllDMAs();
+  let html='';
+  (C.systems||[]).forEach((w,wi)=>{
+    html+=`<div class="info-card"><h4>${w.name}</h4>
+      <div class="info-row"><span>Type</span><span class="info-val">${w.systemType||'–'}</span></div>
+      <div class="info-row"><span>Built</span><span class="info-val">${w.constructionYear||'–'}</span></div>
+      <div class="info-row"><span>Reservoirs</span><span class="info-val">${w.reservoirs||'–'}</span></div>
+      <div class="info-row"><span>Status</span><span class="info-val"><span class="pill p-warn">${w.status||'–'}</span></span></div>
+      <div class="info-row"><span>DMAs</span><span class="info-val">${(w.dmas||[]).map(d=>d.name).join(', ')||'–'}</span></div>
+      <div class="info-row"><span>Total Connections</span><span class="info-val">${(w.dmas||[]).reduce((s,d)=>s+(+d.connections||0),0).toLocaleString()}</span></div>
+    </div>`;
+  });
+  html+=`<div class="info-card"><h4>Operator Information</h4>
+    <div class="info-row"><span>District</span><span class="info-val">${C.district||'–'}</span></div>
+    <div class="info-row"><span>Country</span><span class="info-val">${C.country||'–'}</span></div>
+    <div class="info-row"><span>Operator</span><span class="info-val">${C.operator||'–'}</span></div>
+    <div class="info-row"><span>Asset Owner</span><span class="info-val">${C.utility||'–'}</span></div>
+    <div class="info-row"><span>Programme</span><span class="info-val">${C.programme||'–'}</span></div>
+    <div class="info-row"><span>Funder</span><span class="info-val">${C.funder||'–'}</span></div>
+    <div class="info-row"><span>Period</span><span class="info-val">${C.period||'–'}</span></div>
+  </div>`;
+  html+=`<div class="info-card"><h4>NRW Targets by DMA</h4>${allDmas.map(d=>`<div class="info-row"><span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:${dmaColor(d.globalIdx)}"></span>${d.name}</span></span><span class="info-val"><span class="twarn">${d.target}%</span></span></div>`).join('')}</div>`;
+  html+=`<div class="info-card"><h4>Network Summary</h4>${allDmas.map(d=>`<div class="info-row"><span>${d.name}</span><span class="info-val">${d.km||0} km · ${d.connections||0} conn.</span></div>`).join('')}<div class="info-row"><span><strong>Total</strong></span><span class="info-val"><strong>${allDmas.reduce((s,d)=>s+(+d.km||0),0)} km</strong></span></div></div>`;
+  html+=`<div class="info-card"><h4>Meter Status by DMA</h4>${allDmas.filter(d=>d.totalMeters>0).map(d=>`<div class="info-row"><span>${d.name}</span><span class="info-val">${d.agedPct}% aged / ${d.totalMeters} total</span></div>`).join('')}<div class="info-row"><span>Overall Aged</span><span class="info-val tred">${C.metAgedPct}%</span></div></div>`;
+  document.getElementById('sysGrid').innerHTML=html;
+
+  document.getElementById('sysRevTitle').textContent=`Revenue by Category (${cur}) — Avg per Month`;
+  mkChart('sysRevCat','bar',{labels:MONTHS6,datasets:[
+    {label:'Institutional',data:[865.9,767.2,751.4,788.1,879.5,1014.8],backgroundColor:'rgba(251,191,36,.75)',borderRadius:3},
+    {label:'Households',data:[399.9,408.1,372.3,401.6,364.8,484.3],backgroundColor:'rgba(96,165,250,.75)',borderRadius:3},
+    {label:'BF',data:[289.7,235.2,247.2,222.4,269.2,553.1],backgroundColor:'rgba(56,189,248,.75)',borderRadius:3},
+    {label:'Industrial',data:[103.3,99.1,85.8,124.4,111.5,117.8],backgroundColor:'rgba(167,139,250,.75)',borderRadius:3},
+    {label:'Commercial',data:[52.2,63.0,64.3,59.6,60.3,78.9],backgroundColor:'rgba(52,211,153,.75)',borderRadius:3},
+  ]},{plugins:{legend:{display:true,labels:{color:'#64748b',boxWidth:9,font:{size:10}}}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{callback:v=>cur+v}}}});
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  IWA TREE BUILDER
+// ═══════════════════════════════════════════════════════════════════
+function buildIWATree(inp){
+  const p=v=>(v/inp*100).toFixed(2)+'%';
+  const m=v=>(+v||0).toLocaleString()+' m³';
+  const r=(cls,col,lbl,mv,pv,bold=false)=>`<div class="iwa-row ${cls}"><span class="idot" style="background:${col}"></span><span class="iwa-lbl"${bold?' style="font-weight:600"':''}>${lbl}</span><span class="iwa-m3">${mv}</span><span class="iwa-pct" style="color:${col}">${pv}</span></div>`;
+  const auth=(+C.iwaBillMet||0)+(+C.iwaBillUnmet||0)+(+C.iwaUnbMet||0)+(+C.iwaUnbUnmet||0);
+  const nrwTotal=(+C.iwaReal||0)+(+C.iwaApparent||0);
+  return r('','#60a5fa','System Input Volume',m(inp),'100%',true)
+    +r('i1','var(--g)','Authorised Consumption',m(auth),p(auth))
+    +r('i2','var(--g)','Billed Metered',m(C.iwaBillMet),p(C.iwaBillMet))
+    +r('i2','#6ee7b7','Billed Unmetered',m(C.iwaBillUnmet),p(C.iwaBillUnmet))
+    +r('i2','#a7f3d0','Unbilled Metered',m(C.iwaUnbMet),p(C.iwaUnbMet))
+    +r('i2','#d1fae5','Unbilled Unmetered',m(C.iwaUnbUnmet),p(C.iwaUnbUnmet))
+    +r('i1','var(--danger)','Non-Revenue Water (Total)',m(nrwTotal),p(nrwTotal),true)
+    +r('i2','var(--warn)','Apparent Losses (Metering + Unauthorised)',m(C.iwaApparent),p(C.iwaApparent))
+    +r('i2','var(--danger)','Real Losses (Physical Leakage)',m(C.iwaReal),p(C.iwaReal))
+    +r('i3','#fca5a5','→ Leakages on Mains',m(C.iwaMains),p(C.iwaMains))
+    +r('i3','#fca5a5','→ Tank Overflows',m(C.iwaTanks),p(C.iwaTanks))
+    +r('i3','#fca5a5','→ Service Connection Leaks',m(C.iwaSC),p(C.iwaSC));
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MODAL — TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════════
+function openModal(){buildModalContent();populateModal();document.getElementById('overlay').classList.remove('hidden');}
+function closeModal(){document.getElementById('overlay').classList.add('hidden');}
+function overlayClick(e){if(e.target===document.getElementById('overlay'))closeModal();}
+function mTab(id){
+  document.querySelectorAll('.mpanel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.mtab').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('mt-'+id.replace('t-','')).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MODAL — BUILD DYNAMIC WSS/DMA EDITOR
+// ═══════════════════════════════════════════════════════════════════
+function buildModalContent(){
+  buildWSSEditor();
+  buildNRWDataEditor();
+  buildMonthGrids();
+  buildInterventionEditor();
+}
+
+function buildWSSEditor(){
+  const cont=document.getElementById('wssContainer');
+  cont.innerHTML='';
+  (C.systems||[]).forEach((w,wi)=>{
+    const wDiv=document.createElement('div');
+    wDiv.className='wss-block';
+    wDiv.id='wss-block-'+wi;
+    wDiv.innerHTML=`
+      <div class="wss-hdr">
+        <div class="wss-hdr-left">
+          <div class="wss-label">WSS ${wi+1}</div>
+          <div class="wss-count">${(w.dmas||[]).length} DMA${(w.dmas||[]).length!==1?'s':''}</div>
+        </div>
+        ${wi>0?`<button class="btn-rm" onclick="removeWSS(${wi})">✕ Remove WSS</button>`:''}
+      </div>
+      <div class="fg">
+        <div class="fgrp"><label>WSS Name</label><input type="text" id="wss-name-${wi}" value="${w.name||''}" placeholder="e.g. Cyamabuye-Kagohe"></div>
+        <div class="fgrp"><label>System Type</label><input type="text" id="wss-type-${wi}" value="${w.systemType||''}" placeholder="e.g. Pumping / Gravity"></div>
+        <div class="fgrp"><label>Construction Year</label><input type="number" id="wss-year-${wi}" value="${w.constructionYear||''}" placeholder="2008"></div>
+        <div class="fgrp"><label>Reservoirs</label><input type="number" id="wss-res-${wi}" value="${w.reservoirs||''}" placeholder="28"></div>
+        <div class="fgrp"><label>Status</label><input type="text" id="wss-status-${wi}" value="${w.status||''}" placeholder="Operational / Partial"></div>
+      </div>
+      <div id="dma-container-${wi}"></div>
+      <button class="btn-add-dma" onclick="addDMA(${wi})">＋ Add DMA to this WSS</button>`;
+    cont.appendChild(wDiv);
+    buildDMAEditor(wi,w.dmas||[]);
+  });
+}
+
+function buildDMAEditor(wi, dmas){
+  const cont=document.getElementById('dma-container-'+wi);
+  if(!cont)return;
+  cont.innerHTML='';
+  const allPrev=[];
+  (C.systems||[]).slice(0,wi).forEach(w=>(w.dmas||[]).forEach(d=>allPrev.push(d)));
+  dmas.forEach((d,di)=>{
+    const gi=allPrev.length+di;
+    const col=dmaColor(gi);
+    const dDiv=document.createElement('div');
+    dDiv.className='dma-block';
+    dDiv.id=`dma-block-${wi}-${di}`;
+    dDiv.innerHTML=`
+      <div class="dma-hdr">
+        <div class="dma-label"><span class="dma-dot" style="background:${col}"></span>DMA ${di+1}</div>
+        ${di>0||wi>0?`<button class="btn-rm" onclick="removeDMA(${wi},${di})">✕ Remove DMA</button>`:''}
+      </div>
+      <div class="fg">
+        <div class="fgrp"><label>DMA Name</label><input type="text" id="dma-name-${wi}-${di}" value="${d.name||''}" placeholder="e.g. Bigogwe"></div>
+        <div class="fgrp"><label>NRW Target (%)</label><input type="number" id="dma-target-${wi}-${di}" value="${d.target||''}" placeholder="30" min="0" max="100"></div>
+        <div class="fgrp"><label>Network Length (km)</label><input type="number" id="dma-km-${wi}-${di}" value="${d.km||''}" placeholder="120"></div>
+        <div class="fgrp"><label>Total Connections</label><input type="number" id="dma-conn-${wi}-${di}" value="${d.connections||''}" placeholder="1200"></div>
+        <div class="fgrp"><label>Aged Meters (%)</label><input type="number" id="dma-aged-${wi}-${di}" value="${d.agedPct||''}" placeholder="27" step="0.1"></div>
+        <div class="fgrp"><label>Total Meters</label><input type="number" id="dma-meters-${wi}-${di}" value="${d.totalMeters||''}" placeholder="200"></div>
+      </div>`;
+    cont.appendChild(dDiv);
+  });
+}
+
+function addWSS(){
+  C.systems=C.systems||[];
+  C.systems.push({id:'wss'+Date.now(),name:'',systemType:'',constructionYear:'',reservoirs:'',status:'Operational',dmas:[{id:'d'+Date.now(),name:'',target:30,km:0,connections:0,agedPct:0,agedN:0,totalMeters:0,nrw:[0,0,0,0,0,0],campaigns:[0,0,0,0,0,0],zeroCons:[0,0,0,0,0,0],unbilled:[0,0,0,0,0,0]}]});
+  buildWSSEditor(); buildNRWDataEditor();
+}
+function removeWSS(wi){
+  if(C.systems.length<=1){toast('⚠ Must have at least one WSS');return;}
+  C.systems.splice(wi,1);
+  buildWSSEditor(); buildNRWDataEditor();
+}
+function addDMA(wi){
+  C.systems[wi].dmas=C.systems[wi].dmas||[];
+  C.systems[wi].dmas.push({id:'d'+Date.now(),name:'',target:30,km:0,connections:0,agedPct:0,agedN:0,totalMeters:0,nrw:[0,0,0,0,0,0],campaigns:[0,0,0,0,0,0],zeroCons:[0,0,0,0,0,0],unbilled:[0,0,0,0,0,0]});
+  buildWSSEditor(); buildNRWDataEditor();
+}
+function removeDMA(wi,di){
+  const total=(C.systems||[]).reduce((s,w)=>s+(w.dmas||[]).length,0);
+  if(total<=1){toast('⚠ Must have at least one DMA');return;}
+  C.systems[wi].dmas.splice(di,1);
+  buildWSSEditor(); buildNRWDataEditor();
+}
+
+function buildNRWDataEditor(){
+  const cont=document.getElementById('nrwDataContainer');
+  cont.innerHTML='';
+  let gi=0;
+  (C.systems||[]).forEach((w,wi)=>{
+    (w.dmas||[]).forEach((d,di)=>{
+      const col=dmaColor(gi);
+      const div=document.createElement('div');
+      div.style.cssText='margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border)';
+      div.innerHTML=`<div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:${col};margin-bottom:8px">▶ ${d.name||`DMA ${di+1}`} (${w.name||`WSS ${wi+1}`})</div>
+        <div class="mgrid6">${MONTHS6.map((m,i)=>`<div class="mgrp"><div class="mlbl">${m}</div><input type="number" class="minput" id="nrw-${wi}-${di}-${i}" value="${(d.nrw||[])[i]||''}" placeholder="–" min="0" max="100" step="0.1"></div>`).join('')}</div>`;
+      cont.appendChild(div);
+      gi++;
+    });
+  });
+}
+
+function buildMonthGrids(){
+  // Revenue 12 months
+  const rg=document.getElementById('revMonthGrid');
+  rg.innerHTML=MONTHS12.map((m,i)=>`<div class="mgrp"><div class="mlbl">${m}</div><input type="number" class="minput" id="rev-${i}" value="${(C.revMonthly||[])[i]||''}" placeholder="0"></div>`).join('');
+  // Leakage
+  document.getElementById('leakMonthGrid').innerHTML=MONTHS12.map((m,i)=>`<div class="mgrp"><div class="mlbl">${m}</div><input type="number" class="minput" id="lk-${i}" value="${(C.leakMonthly||[])[i]||''}" placeholder="0"></div>`).join('');
+  document.getElementById('respMonthGrid').innerHTML=MONTHS12.map((m,i)=>`<div class="mgrp"><div class="mlbl">${m}</div><input type="number" class="minput" id="rs-${i}" value="${(C.respMonthly||[])[i]??''}" placeholder="–" step="0.1"></div>`).join('');
+  document.getElementById('tanksMonthGrid').innerHTML=MONTHS12.map((m,i)=>`<div class="mgrp"><div class="mlbl">${m}</div><input type="number" class="minput" id="tk-${i}" value="${(C.tanksMonthly||[])[i]||''}" placeholder="0"></div>`).join('');
+  // Meters 6 months
+  document.getElementById('metMonthGrid').innerHTML=MONTHS6.map((m,i)=>`<div class="mgrp"><div class="mlbl">${m}</div><input type="number" class="minput" id="met-${i}" value="${(C.metMonthly||[])[i]||''}" placeholder="0"></div>`).join('');
+}
+
+function buildInterventionEditor(){
+  const cont=document.getElementById('intLogContainer');
+  cont.innerHTML=(C.interventions||[]).map((itv,i)=>`
+    <div class="fg" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+      <div class="fgrp"><label>Month (e.g. Jan 23)</label><input type="text" id="itv-mo-${i}" value="${itv.month||''}"></div>
+      <div class="fgrp"><label>Cost / Budget</label><input type="text" id="itv-cost-${i}" value="${itv.cost||''}"></div>
+      <div class="fgrp fgfull"><label>Title</label><input type="text" id="itv-title-${i}" value="${itv.title||''}"></div>
+      <div class="fgrp fgfull"><label>Description / DMA</label><input type="text" id="itv-meta-${i}" value="${itv.meta||''}"></div>
+      <div style="grid-column:1/-1"><button class="btn-rm" onclick="removeInt(${i})">✕ Remove</button></div>
+    </div>`).join('');
+}
+function addIntRow(){
+  C.interventions=C.interventions||[];
+  C.interventions.push({month:'',title:'',meta:'',cost:''});
+  buildInterventionEditor();
+}
+function removeInt(i){C.interventions.splice(i,1);buildInterventionEditor();}
+
+// ═══════════════════════════════════════════════════════════════════
+//  POPULATE MODAL FROM CFG
+// ═══════════════════════════════════════════════════════════════════
+function populateModal(){
+  const fields=['district','operator','utility','programme','funder','period','year','currency','dataPeriod','country'];
+  fields.forEach(k=>{const el=document.getElementById('c-'+k);if(el)el.value=C[k]||'';});
+  const cons=['consInst','consHh','consBf','consInd','consCom','consAccs','consM3Acc','consPeak','revInst','revHh','revBf','revInd','revCom'];
+  cons.forEach(k=>{const el=document.getElementById('c-'+k);if(el)el.value=C[k]||'';});
+  const leak=['leakTotal','leakResponse','leakTanks','leakPeakMo'];
+  leak.forEach(k=>{const el=document.getElementById('c-'+k);if(el)el.value=C[k]||'';});
+  const met=['metTotal','metServiced','metRetained','metAgedPct','metAgedN','metStock'];
+  met.forEach(k=>{const el=document.getElementById('c-'+k);if(el)el.value=C[k]||'';});
+  for(let i=0;i<7;i++){const el=document.getElementById('c-age'+i);if(el)el.value=(C.meterAge||[])[i]||'';}
+  const iwa=['iwaInput','iwaBillMet','iwaBillUnmet','iwaUnbMet','iwaUnbUnmet','iwaReal','iwaApparent','iwaMains','iwaTanks','iwaSC'];
+  iwa.forEach(k=>{const el=document.getElementById('c-'+k);if(el)el.value=C[k]||'';});
+  const intF=['intCamp','intMeet','intUnreg','intPZ'];
+  intF.forEach(k=>{const el=document.getElementById('c-'+k);if(el)el.value=C[k]||'';});
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  APPLY CONFIG
+// ═══════════════════════════════════════════════════════════════════
+function applyConfig(){
+  // Org
+  ['district','operator','utility','programme','funder','period','year','currency','dataPeriod','country'].forEach(k=>{C[k]=gv('c-'+k);});
+  // WSS & DMAs — read from editor
+  (C.systems||[]).forEach((w,wi)=>{
+    w.name=gv(`wss-name-${wi}`); w.systemType=gv(`wss-type-${wi}`);
+    w.constructionYear=gv(`wss-year-${wi}`); w.reservoirs=gv(`wss-res-${wi}`);
+    w.status=gv(`wss-status-${wi}`);
+    (w.dmas||[]).forEach((d,di)=>{
+      d.name=gv(`dma-name-${wi}-${di}`);
+      d.target=+gv(`dma-target-${wi}-${di}`)||0;
+      d.km=+gv(`dma-km-${wi}-${di}`)||0;
+      d.connections=+gv(`dma-conn-${wi}-${di}`)||0;
+      d.agedPct=+gv(`dma-aged-${wi}-${di}`)||0;
+      d.totalMeters=+gv(`dma-meters-${wi}-${di}`)||0;
+      d.nrw=MONTHS6.map((_,i)=>+document.getElementById(`nrw-${wi}-${di}-${i}`)?.value||0);
+    });
+  });
+  // Consumption
+  ['consInst','consHh','consBf','consInd','consCom','consAccs','consM3Acc'].forEach(k=>{C[k]=+gv('c-'+k)||0;});
+  C.consPeak=gv('c-consPeak');
+  ['revInst','revHh','revBf','revInd','revCom'].forEach(k=>{C[k]=+gv('c-'+k)||0;});
+  C.revMonthly=MONTHS12.map((_,i)=>+document.getElementById(`rev-${i}`)?.value||0);
+  // Leakage
+  C.leakTotal=+gv('c-leakTotal'); C.leakResponse=+gv('c-leakResponse');
+  C.leakTanks=+gv('c-leakTanks'); C.leakPeakMo=gv('c-leakPeakMo');
+  C.leakMonthly=MONTHS12.map((_,i)=>+document.getElementById(`lk-${i}`)?.value||0);
+  C.respMonthly=MONTHS12.map((_,i)=>{const v=document.getElementById(`rs-${i}`)?.value;return v===''||v==null?null:+v;});
+  C.tanksMonthly=MONTHS12.map((_,i)=>+document.getElementById(`tk-${i}`)?.value||0);
+  // Meters
+  ['metTotal','metServiced','metRetained','metAgedPct','metAgedN','metStock'].forEach(k=>{C[k]=+gv('c-'+k)||0;});
+  C.metMonthly=MONTHS6.map((_,i)=>+document.getElementById(`met-${i}`)?.value||0);
+  C.meterAge=[0,1,2,3,4,5,6].map(i=>+gv('c-age'+i)||0);
+  // IWA
+  ['iwaInput','iwaBillMet','iwaBillUnmet','iwaUnbMet','iwaUnbUnmet','iwaReal','iwaApparent','iwaMains','iwaTanks','iwaSC'].forEach(k=>{C[k]=+gv('c-'+k)||0;});
+  // Interventions
+  ['intCamp','intMeet','intUnreg','intPZ'].forEach(k=>{C[k]=+gv('c-'+k)||0;});
+  C.interventions=(C.interventions||[]).map((_,i)=>({month:gv(`itv-mo-${i}`),title:gv(`itv-title-${i}`),meta:gv(`itv-meta-${i}`),cost:gv(`itv-cost-${i}`)})).filter(x=>x.title);
+  save();
+  renderDashboard();
+  closeModal();
+  toast('✓ Dashboard updated successfully');
+}
+
+function resetDefaults(){
+  if(!confirm('Reset all data to the Nyabihu sample dataset?'))return;
+  C=JSON.parse(JSON.stringify(DEFAULT));
+  save();
+  buildModalContent(); populateModal(); renderDashboard();
+  toast('↺ Reset to sample data');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════════════════════════
+function avg(arr){const a=(arr||[]).filter(v=>typeof v==='number'&&v>0);return a.length?a.reduce((s,v)=>s+v,0)/a.length:0;}
+function fmtLarge(n){n=+n;if(n>=1e6)return(n/1e6).toFixed(2)+'M';if(n>=1e3)return(n/1e3).toFixed(0)+'K';return String(n);}
+function gv(id){const el=document.getElementById(id);return el?el.value:'';}
+function nrwClass(v){return v>50?'nrw-bad':v>30?'nrw-warn':'nrw-ok';}
+function nrwCard(v,t){return v>t+20?'red':v>t?'amber':'green';}
+function nrwPill(v,t){return v>t+15?'p-red':v>t?'p-warn':'p-grn';}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.remove('hidden');setTimeout(()=>t.classList.add('hidden'),2800);}
+function showSection(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+function buildLegend(id,dmas){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.innerHTML=dmas.map(d=>`<span class="leg-item"><span class="leg-dot" style="background:${dmaColor(d.globalIdx)}"></span>${d.name}</span>`).join('')+'<span class="leg-item"><span class="leg-line" style="background:rgba(251,191,36,.7)"></span>Targets</span>';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════
+(function init(){
+  const saved=load();
+  C=saved?saved:JSON.parse(JSON.stringify(DEFAULT));
+  renderDashboard();
+  if(!saved)setTimeout(()=>toast('👋 Sample data loaded — click ⚙ Configure to customise'),900);
+})();
+</script>
+</body>
+</html>
