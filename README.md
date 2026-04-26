@@ -3,7 +3,7 @@
 > **A production-grade, fully configurable HTML dashboard for Non-Revenue Water (NRW) monitoring.**  
 > Works for any number of Water Supply Systems (WSS) and District Metered Areas (DMAs). No server, no installation, no coding required.
 
-🌐 **Live Demo:** [View on GitHub Pages](https://your-username.github.io/nrw-dashboard/)
+🌐 **Live Demo:** [View on GitHub Pages](https://inno100sami.github.io/Python-NRW-Assessment-Monitoring-Dashboard/NRW_Dashboard_v3.html)
 
 ---
 
